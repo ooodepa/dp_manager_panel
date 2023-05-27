@@ -1,0 +1,21 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+
+.table caption {
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.table img {
+  max-height: 32px;
+  max-width: 64px;
+}
+
+.table tbody tr td,
+.table thead tr th {
+  border: 1px solid gray;
+  padding: 8px;
+}

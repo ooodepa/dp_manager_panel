@@ -54,7 +54,7 @@ export default function LoginPage() {
         }
 
         await FetchUsers.isManager();
- 
+
         navigate('/');
       } catch (exception) {
         await AsyncAlertExceptionHelper(exception, navigate);

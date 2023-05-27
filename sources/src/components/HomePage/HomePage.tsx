@@ -1,21 +1,175 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
+import styles from './HomePage.module.css';
+import getTimeAgo from '../../package/getTimeAgo';
+import getStringTime from '../../package/getStringTime';
+import AppContainer from '../AppContainer/AppContainer';
+import getNumberSequence from '../../package/getNumberSequence';
 import FetchUsers from '../../utils/FetchBackend/rest/api/users';
+import FetchManager from '../../utils/FetchBackend/rest/api/manager';
 import { AsyncAlertExceptionHelper } from '../../utils/AlertExceptionHelper';
 
 export default function HomePage() {
+  const { pageParam } = useParams();
   const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [orders, setOrders] = useState([
+    {
+      dp_id: '',
+      dp_date: '',
+      dp_userId: 0,
+      dp_isCancelled: false,
+      dp_isCompleted: false,
+      dp_orderItems: [
+        {
+          dp_id: 0,
+          dp_orderId: '',
+          dp_itemId: '',
+          dp_count: 0,
+          dp_cost: 0,
+        },
+      ],
+    },
+  ]);
 
   useEffect(() => {
+    const number = Number(pageParam);
+    console.log(number);
+    if (!number) {
+      navigate('/page/1');
+      return;
+    }
+
+    setPage(number);
+
     (async function () {
       try {
         await FetchUsers.isManager();
+
+        const ordersData = await FetchManager.getOrders({
+          take: 10,
+          page: number,
+        });
+        setPage(ordersData.page);
+        setTotalPages(ordersData.totalPages);
+        setOrders(ordersData.data);
       } catch (exception) {
         await AsyncAlertExceptionHelper(exception, navigate);
+        setTotalPages(0);
+        setPage(0);
+        setOrders([]);
       }
     })();
-  });
+  }, [navigate, pageParam]);
 
-  return <div>Home page</div>;
+  if (orders.length === 1 && orders[0].dp_id === '') {
+    return (
+      <p>Нет ни одного заказа. БД пуста, либо не удалось загрузить данные.</p>
+    );
+  }
+
+  if (orders.length === 0 && page === 0) {
+    return (
+      <p>Нет ни одного заказа. БД пуста, либо не удалось загрузить данные.</p>
+    );
+  }
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={styles.content}>
+        <AppContainer>
+          <table className={styles.table}>
+            <caption>
+              Таблица - Заявки пользователей (страница {page} из {totalPages})
+            </caption>
+            <thead>
+              <tr>
+                <th>Сколько времени назад</th>
+                <th>Дата</th>
+                <th>Количество позиций</th>
+                <th>Сумма, Br</th>
+                <th>Состояние</th>
+                <th>Просмотреть</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map(e => {
+                const date = new Date(e.dp_date);
+                const stringTime = getStringTime(date);
+                const timeAgo = getTimeAgo(date);
+
+                let totalSum = 0;
+                e.dp_orderItems.forEach(item => {
+                  totalSum += item.dp_cost * item.dp_count;
+                });
+                const stringTotalSum = Number(totalSum).toFixed(2);
+
+                const status = e.dp_isCancelled
+                  ? 'отменен заказ клиентом'
+                  : e.dp_isCompleted
+                  ? 'заказ доставлен'
+                  : 'клиент ожидает заказа';
+
+                return (
+                  <tr
+                    key={e.dp_id}
+                    data-is-completed={e.dp_isCompleted ? '1' : '0'}
+                    data-is-close={e.dp_isCancelled ? '1' : '0'}
+                  >
+                    <td>{timeAgo}</td>
+                    <td>{stringTime}</td>
+                    <td>{e.dp_orderItems.length}</td>
+                    <td style={{ textAlign: 'right' }}>{stringTotalSum}</td>
+                    <td>{status}</td>
+                    <td>
+                      <button onClick={() => navigate(`/orders/${e.dp_id}`)}>
+                        Просмотреть
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </AppContainer>
+      </div>
+      <div className={styles.footer}>
+        <p style={{ textAlign: 'center' }}>
+          {page}/{totalPages}
+        </p>
+        <ol className={styles.pages}>
+          <li
+            onClick={() => navigate(`/page/${page - 1 < 0 ? 1 : page - 1}`)}
+            title={`Открыть страницу ${page - 1 < 0 ? 1 : page}`}
+            data-is-text="1"
+          >
+            Предыдущая
+          </li>
+          {getNumberSequence(page, totalPages).map((e, index) => {
+            return (
+              <li
+                key={index}
+                data-is-current={e === page ? '1' : '0'}
+                onClick={() => navigate(`/page/${e}`)}
+                title={`Открыть страницу ${e}/${totalPages}`}
+              >
+                {e}
+              </li>
+            );
+          })}
+          <li
+            onClick={() =>
+              navigate(`/page/${page + 1 < totalPages ? page + 1 : totalPages}`)
+            }
+            title={`Открыть страницу ${page + 1}`}
+            data-is-text="1"
+          >
+            Следующая
+          </li>
+        </ol>
+      </div>
+    </div>
+  );
 }

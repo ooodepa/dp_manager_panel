@@ -18,7 +18,7 @@ export default function AlertExceptionHelper(exception: any) {
       return;
     }
 
-    if(exception instanceof Error) {
+    if (exception instanceof Error) {
       const message = `${exception.message}`;
       alert(message);
       return;
@@ -35,7 +35,7 @@ export async function AsyncAlertExceptionHelper(
   navigate: NavigateFunction,
 ) {
   try {
-    console.log(exception)
+    console.log(exception);
     if (exception instanceof HttpException && exception.HTTP_STATUS === 401) {
       navigate('/login');
       return;
