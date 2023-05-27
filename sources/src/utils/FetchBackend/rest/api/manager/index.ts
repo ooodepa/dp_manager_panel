@@ -1,10 +1,11 @@
 import FetchBackend from './../../../';
 import HttpException from './../../../HttpException';
 import ManagerGetOrder from './dto/manager-get-order.dto';
+import ManagerGetUserDto from './dto/manager-get-user.dto';
 import GetOrderWithIdDto from '../orders/dto/get-order-with.id.dto';
 import ManagerGetOrderQuery from './dto/manager-get-order-query.dto';
 import objectToQueryString from '../../../../../package/objectToQuery';
-import ManagerGetUserDto from './dto/manager-get-user.dto';
+import ManagerCreateOrderStatus from './dto/manager-create-order-status.dto';
 
 export default class FetchManager {
   static async getOrders(query: ManagerGetOrderQuery = {}) {
@@ -42,6 +43,37 @@ export default class FetchManager {
     if (response.status === 200) {
       const json: ManagerGetUserDto = await response.json();
       return json;
+    }
+
+    throw new HttpException(result.method, response);
+  }
+
+  static async createOrderStatus(dto: ManagerCreateOrderStatus) {
+    const result = await FetchBackend(
+      'access',
+      'POST',
+      'manager/order-statuses',
+      dto,
+    );
+    const response = result.response;
+
+    if (response.status === 201) {
+      return true;
+    }
+
+    throw new HttpException(result.method, response);
+  }
+
+  static async removeOrderStatus(orderId: string, orderStatusId: number) {
+    const result = await FetchBackend(
+      'access',
+      'DELETE',
+      `manager/order/${orderId}/order-statuses/${orderStatusId}`,
+    );
+    const response = result.response;
+
+    if (response.status === 200) {
+      return true;
     }
 
     throw new HttpException(result.method, response);

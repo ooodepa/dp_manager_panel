@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import styles from './UpdateOrderPage.module.css';
+import getTimeAgo from '../../package/getTimeAgo';
+import getStringTime from '../../package/getStringTime';
+import AppContainer from '../AppContainer/AppContainer';
 import FetchItems from '../../utils/FetchBackend/rest/api/items';
+import FetchUsers from '../../utils/FetchBackend/rest/api/users';
 import FetchManager from '../../utils/FetchBackend/rest/api/manager';
 import { AsyncAlertExceptionHelper } from '../../utils/AlertExceptionHelper';
-import AppContainer from '../AppContainer/AppContainer';
-import getStringTime from '../../package/getStringTime';
-import getTimeAgo from '../../package/getTimeAgo';
+import FetchOrderStatuses from '../../utils/FetchBackend/rest/api/order-statuses';
 
 interface ItemAndOrderItemDto {
   dp_id: string;
@@ -59,6 +61,15 @@ export default function UpdateOrderPage() {
     dp_lastName: '',
     dp_middleName: '',
   });
+  const [status, setStatus] = useState('');
+  const [statuses, setStatuses] = useState([
+    {
+      dp_id: 0,
+      dp_date: '',
+      dp_status: '',
+      dp_orderId: '',
+    },
+  ]);
 
   useEffect(() => {
     if (!id) {
@@ -67,6 +78,8 @@ export default function UpdateOrderPage() {
 
     (async function () {
       try {
+        await FetchUsers.isManager();
+
         const orderData = await FetchManager.getOrderById(id);
         setOrder(orderData);
 
@@ -106,11 +119,37 @@ export default function UpdateOrderPage() {
 
         const userData = await FetchManager.getUserById(orderData.dp_userId);
         setUser(userData);
+
+        const statusesData = await FetchOrderStatuses.get(orderData.dp_id);
+        setStatuses(statusesData);
       } catch (exception) {
         await AsyncAlertExceptionHelper(exception, navigate);
       }
     })();
   }, [id, navigate]);
+
+  async function addStatus() {
+    try {
+      await FetchManager.createOrderStatus({
+        dp_orderId: order.dp_id,
+        dp_status: status,
+      });
+      const statusesData = await FetchOrderStatuses.get(order.dp_id);
+      setStatuses(statusesData);
+    } catch (exception) {
+      await AsyncAlertExceptionHelper(exception, navigate);
+    }
+  }
+
+  async function deleteStatus(orderStatusId: number) {
+    try {
+      await FetchManager.removeOrderStatus(order.dp_id, orderStatusId);
+      const statusesData = await FetchOrderStatuses.get(order.dp_id);
+      setStatuses(statusesData);
+    } catch (exception) {
+      await AsyncAlertExceptionHelper(exception, navigate);
+    }
+  }
 
   let totalSum = 0;
   const date = new Date(order.dp_date);
@@ -221,6 +260,47 @@ export default function UpdateOrderPage() {
           </tr>
         </tbody>
       </table>
+      <div className={styles.form}>
+        <input
+          type="text"
+          value={status}
+          onChange={event => setStatus(event.target.value)}
+          placeholder="статус"
+        />
+        <button onClick={addStatus}>Добавить статус</button>
+      </div>
+      {!statuses.length ? null : (
+        <table className={styles.table}>
+          <caption>Таблица - Статусы заказа</caption>
+          <thead>
+            <tr>
+              <th>Дата, время</th>
+              <th>Сколько времени назад</th>
+              <th>Статус</th>
+              <th>Удалить</th>
+            </tr>
+          </thead>
+          <tbody>
+            {statuses.map(e => {
+              const date = new Date(e.dp_date);
+              const timeString = getStringTime(date);
+              const timeAgo = getTimeAgo(date);
+              return (
+                <tr key={e.dp_id}>
+                  <td>{timeString}</td>
+                  <td>{timeAgo}</td>
+                  <td>{e.dp_status}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button onClick={() => deleteStatus(e.dp_id)}>
+                      Удалить
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </AppContainer>
   );
 }
