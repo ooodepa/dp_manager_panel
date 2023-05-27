@@ -64,11 +64,41 @@ export default class FetchManager {
     throw new HttpException(result.method, response);
   }
 
-  static async removeOrderStatus(orderId: string, orderStatusId: number) {
+  static async removeOrderStatus(id: number, orderId: string) {
     const result = await FetchBackend(
       'access',
       'DELETE',
-      `manager/order/${orderId}/order-statuses/${orderStatusId}`,
+      `manager/order-statuses/${id}/orders/${orderId}`,
+    );
+    const response = result.response;
+
+    if (response.status === 200) {
+      return true;
+    }
+
+    throw new HttpException(result.method, response);
+  }
+
+  static async patchOrderIsCanceledByManager(id: string) {
+    const result = await FetchBackend(
+      'access',
+      'PATCH',
+      `manager/orders/${id}/is-canceled`,
+    );
+    const response = result.response;
+
+    if (response.status === 200) {
+      return true;
+    }
+
+    throw new HttpException(result.method, response);
+  }
+
+  static async patchOrderIsSentedByManager(id: string) {
+    const result = await FetchBackend(
+      'access',
+      'PATCH',
+      `manager/orders/${id}/is-sented`,
     );
     const response = result.response;
 

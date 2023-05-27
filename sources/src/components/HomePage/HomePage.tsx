@@ -9,30 +9,14 @@ import getNumberSequence from '../../package/getNumberSequence';
 import FetchUsers from '../../utils/FetchBackend/rest/api/users';
 import FetchManager from '../../utils/FetchBackend/rest/api/manager';
 import { AsyncAlertExceptionHelper } from '../../utils/AlertExceptionHelper';
+import GetOrderWithIdDto from '../../utils/FetchBackend/rest/api/orders/dto/get-order-with.id.dto';
 
 export default function HomePage() {
   const { pageParam } = useParams();
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [orders, setOrders] = useState([
-    {
-      dp_id: '',
-      dp_date: '',
-      dp_userId: 0,
-      dp_isCancelled: false,
-      dp_isCompleted: false,
-      dp_orderItems: [
-        {
-          dp_id: 0,
-          dp_orderId: '',
-          dp_itemId: '',
-          dp_count: 0,
-          dp_cost: 0,
-        },
-      ],
-    },
-  ]);
+  const [orders, setOrders] = useState<GetOrderWithIdDto[]>([]);
 
   useEffect(() => {
     const number = Number(pageParam);
@@ -106,17 +90,29 @@ export default function HomePage() {
                 });
                 const stringTotalSum = Number(totalSum).toFixed(2);
 
-                const status = e.dp_isCancelled
-                  ? 'отменен заказ клиентом'
-                  : e.dp_isCompleted
-                  ? 'заказ доставлен'
-                  : 'клиент ожидает заказа';
+                const status = e.dp_canceledByClientOn
+                  ? 'заказ отменён клиентом'
+                  : e.dp_canceledByManagerOn
+                  ? 'заказ отменён менеджером'
+                  : e.dp_sentedByManagerOn
+                  ? 'заказ отправлен менеджером'
+                  : e.dp_receivedByClientOn
+                  ? 'заказ получен менеджером'
+                  : '';
 
                 return (
                   <tr
                     key={e.dp_id}
-                    data-is-completed={e.dp_isCompleted ? '1' : '0'}
-                    data-is-close={e.dp_isCancelled ? '1' : '0'}
+                    data-is-completed={
+                      e.dp_sentedByManagerOn || e.dp_receivedByClientOn
+                        ? '1'
+                        : '0'
+                    }
+                    data-is-close={
+                      e.dp_canceledByManagerOn || e.dp_canceledByClientOn
+                        ? '1'
+                        : '0'
+                    }
                   >
                     <td>{timeAgo}</td>
                     <td>{stringTime}</td>
